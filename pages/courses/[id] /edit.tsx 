@@ -1,0 +1,88 @@
+// pages/courses/[id]/edit.tsx
+
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import { Container, Typography, Box, CircularProgress, Snackbar, Alert } from '@mui/material';
+import axiosInstance from '@/utils/axiosInstance';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import CourseForm from '@/components/courses/CourseForm';
+
+const EditCoursePage = () => {
+  const router = useRouter();
+  const { id } = router.query;
+  const [courseData, setCourseData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  useEffect(() => {
+    if (id) {
+      const fetchCourse = async () => {
+        try {
+          const res = await axiosInstance.get(`/courses/${id}/`);
+          setCourseData(res.data);
+        } catch (err) {
+          console.error(err);
+          setSnackbar({ open: true, message: 'Failed to load course.', severity: 'error' });
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchCourse();
+    }
+  }, [id]);
+
+  const handleUpdate = async (updatedData) => {
+    try {
+      await axiosInstance.put(`/courses/${id}/`, updatedData);
+      setSnackbar({ open: true, message: 'Course updated successfully!', severity: 'success' });
+      setTimeout(() => router.push('/courses'), 1500);
+    } catch (err) {
+      console.error(err);
+      setSnackbar({ open: true, message: 'Failed to update course.', severity: 'error' });
+    }
+  };
+
+  return (
+    <ProtectedRoute adminOnly>
+      <Container maxWidth="sm" sx={{ py: 6 }}>
+        {loading ? (
+          <Box display="flex" justifyContent="center" mt={8}>
+            <CircularProgress />
+          </Box>
+        ) : courseData ? (
+          <>
+            <Box textAlign="center" mb={4}>
+              <Typography variant="h4" fontWeight={700}>
+                ✏️ Edit Course
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Update your course details below.
+              </Typography>
+            </Box>
+            <CourseForm initialData={courseData} onSubmit={handleUpdate} />
+          </>
+        ) : (
+          <Typography align="center" mt={4}>
+            Course not found.
+          </Typography>
+        )}
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          <Alert
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            severity={snackbar.severity as 'success' | 'error'}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </ProtectedRoute>
+  );
+};
+
+export default EditCoursePage;
